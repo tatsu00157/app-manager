@@ -1,66 +1,277 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client";
+
+import { useState, useEffect } from "react";
+
+type AppItem = {
+  id: number;
+  name: string;
+  version: string;
+  createdAt: string;
+  updatedAt: string;
+  days: number;
+};
+
+type AppForm = {
+  name: string;
+  version: string;
+  createdAt: string;
+  updatedAt: string;
+};
 
 export default function Home() {
+  const [apps, setApps] = useState<AppItem[]>([]);
+  const [form, setForm] = useState<AppForm>({
+    name: "",
+    version: "",
+    createdAt: "",
+    updatedAt: "",
+  });
+
+  const [editingId, setEditingId] = useState<number | null>(null);
+
+  // 初回ロード
+    useEffect(() => {
+    const load = async () => {
+      const res = await fetch("/api/apps");
+
+      const raw: {
+        id: number;
+        name: string;
+        version: string;
+        createdAt?: string;
+        updatedAt: string;
+      }[] = await res.json();
+
+      const now = Date.now();
+
+      const withDays: AppItem[] = raw.map((item) => ({
+        id: item.id,
+        name: item.name,
+        version: item.version,
+        createdAt: item.createdAt ?? "",
+        updatedAt: item.updatedAt,
+        days: Math.floor((now - new Date(item.updatedAt).getTime()) / 86400000),
+      }));
+
+      setApps(withDays);
+    };
+
+    void load();
+  }, []);
+
+  // 追加 or 編集
+  const submitForm = async () => {
+    if (editingId === null) {
+      const res = await fetch("/api/apps", {
+        method: "POST",
+        body: JSON.stringify(form),
+      });
+
+      const raw = await res.json();
+      const now = Date.now();
+
+      const newItem: AppItem = {
+        ...raw,
+        days: Math.floor((now - new Date(raw.updatedAt).getTime()) / 86400000),
+      };
+
+      setApps((prev) => [...prev, newItem]);
+    } else {
+      setApps((prev) =>
+        prev.map((item) =>
+          item.id === editingId
+            ? {
+                ...item,
+                ...form,
+              }
+            : item
+        )
+      );
+      setEditingId(null);
+    }
+
+    setForm({
+      name: "",
+      version: "",
+      createdAt: "",
+      updatedAt: "",
+    });
+  };
+
+  const startEdit = (item: AppItem) => {
+    setEditingId(item.id);
+    setForm({
+      name: item.name,
+      version: item.version,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+    });
+  };
+
+  const deleteItem = (id: number) => {
+    setApps((prev) => prev.filter((item) => item.id !== id));
+  };
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#f1f1f1",
+        padding: "30px 0",
+        fontFamily: "sans-serif",
+      }}
+    >
+      {/* ★★★ 登録フォームを小さく上に配置 ★★★ */}
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 700,
+          margin: "0 auto 20px auto",
+          background: "white",
+          padding: 12,
+          borderRadius: 6,
+          boxShadow: "0 0 6px rgba(0,0,0,0.1)",
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 8,
+          alignItems: "center",
+        }}
+      >
+        <input
+          placeholder="アプリ名"
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          style={smallInput}
         />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.tsx file.</h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+        <input
+          placeholder="バージョン"
+          value={form.version}
+          onChange={(e) => setForm({ ...form, version: e.target.value })}
+          style={smallInput}
+        />
+        <input
+          type="date"
+          value={form.createdAt}
+          onChange={(e) => setForm({ ...form, createdAt: e.target.value })}
+          style={smallInput}
+          placeholder="開発日"
+        />
+        <input
+          type="date"
+          value={form.updatedAt}
+          onChange={(e) => setForm({ ...form, updatedAt: e.target.value })}
+          style={smallInput}
+          placeholder="更新日"
+        />
+
+        <button
+          onClick={submitForm}
+          style={{
+            padding: "8px 14px",
+            background: editingId ? "#ff9800" : "#0070f3",
+            color: "#fff",
+            border: "none",
+            borderRadius: 4,
+            cursor: "pointer",
+            fontSize: 14,
+          }}
+        >
+          {editingId ? "更新" : "追加"}
+        </button>
+      </div>
+
+      {/* ★★★ 一覧をメイン・大画面中央表示 ★★★ */}
+      <div
+        style={{
+          width: "95%",
+          maxWidth: 1100,
+          margin: "0 auto",
+        }}
+      >
+        <table
+          style={{
+            width: "100%",
+            borderCollapse: "collapse",
+            background: "white",
+            borderRadius: 10,
+            overflow: "hidden",
+            boxShadow: "0 0 8px rgba(0,0,0,0.15)",
+          }}
+        >
+          <thead>
+            <tr style={{ background: "#444" }}>
+              <th style={th}>名前</th>
+              <th style={th}>バージョン</th>
+              <th style={th}>開発日</th>
+              <th style={th}>更新日</th>
+              <th style={th}>経過日</th>
+              <th style={th}>操作</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {apps.map((app) => (
+              <tr key={app.id} style={{ background: "white" }}>
+                <td style={td}>{app.name}</td>
+                <td style={td}>{app.version}</td>
+                <td style={td}>{app.createdAt}</td>
+                <td style={td}>{app.updatedAt}</td>
+                <td style={td}>{app.days} 日</td>
+                <td style={td}>
+                  <button onClick={() => startEdit(app)} style={editBtn}>
+                    📝
+                  </button>
+                  <button onClick={() => deleteItem(app.id)} style={deleteBtn}>
+                    🗑
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
+
+// --- Styles ---
+const smallInput: React.CSSProperties = {
+  padding: "6px 8px",
+  fontSize: 14,
+  borderRadius: 4,
+  border: "1px solid #ccc",
+  flex: "1 1 140px",
+};
+
+const th: React.CSSProperties = {
+  padding: 12,
+  color: "white",
+  fontWeight: "bold",
+  borderBottom: "1px solid #666",
+};
+
+const td: React.CSSProperties = {
+  padding: 12,
+  color: "black",
+  borderBottom: "1px solid #eee",
+  textAlign: "center",
+};
+
+const editBtn: React.CSSProperties = {
+  padding: "5px 8px",
+  marginRight: 6,
+  background: "#FFA726",
+  color: "white",
+  border: "none",
+  borderRadius: 4,
+  cursor: "pointer",
+};
+
+const deleteBtn: React.CSSProperties = {
+  padding: "5px 8px",
+  background: "#E53935",
+  color: "white",
+  border: "none",
+  borderRadius: 4,
+  cursor: "pointer",
+};
