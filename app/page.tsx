@@ -108,9 +108,20 @@ export default function Home() {
     });
   };
 
-  const deleteItem = (id: number) => {
-    setApps((prev) => prev.filter((item) => item.id !== id));
-  };
+  const deleteItem = async (id: number) => {
+  const ok = window.confirm("本当に削除しますか？");
+  if (!ok) return;
+
+  // API に削除リクエストを送る
+  await fetch("/api/apps", {
+    method: "DELETE",
+    body: JSON.stringify({ id }),
+  });
+
+  // 画面上でも消す
+  setApps((prev) => prev.filter((item) => item.id !== id));
+};
+
 
   return (
     <div
@@ -216,7 +227,15 @@ export default function Home() {
                 <td style={td}>{app.version}</td>
                 <td style={td}>{app.createdAt}</td>
                 <td style={td}>{app.updatedAt}</td>
-                <td style={td}>{app.days} 日</td>
+                 <td
+                style={{
+                  ...td,
+                  color: app.days >= 7 ? "red" : "black",
+                  fontWeight: app.days >= 7 ? "bold" : "normal",
+                }}
+              >
+                {app.days} 日
+              </td>
                 <td style={td}>
                   <button onClick={() => startEdit(app)} style={editBtn}>
                     📝

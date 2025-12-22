@@ -25,3 +25,24 @@ export async function POST(req: Request) {
 
   return NextResponse.json(newItem);
 }
+type AppRecord = {
+  id: number;
+  name: string;
+  version: string;
+  createdAt?: string;
+  updatedAt: string;
+};
+
+export async function DELETE(req: Request) {
+  const { id } = (await req.json()) as { id: number };
+
+  const data = JSON.parse(
+    fs.readFileSync(filePath, "utf-8")
+  ) as AppRecord[];
+
+  const newData = data.filter((item) => item.id !== id);
+
+  fs.writeFileSync(filePath, JSON.stringify(newData, null, 2));
+
+  return NextResponse.json({ success: true });
+}
