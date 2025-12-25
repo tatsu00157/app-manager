@@ -77,18 +77,45 @@ export default function Home() {
 
       setApps((prev) => [...prev, newItem]);
     } else {
-      setApps((prev) =>
-        prev.map((item) =>
-          item.id === editingId
-            ? {
-                ...item,
-                ...form,
-              }
-            : item
+  const now = Date.now();
+
+  const days =
+    form.updatedAt && form.updatedAt !== ""
+      ? Math.floor(
+          (now - new Date(form.updatedAt).getTime()) / 86400000
         )
-      );
-      setEditingId(null);
-    }
+      : 0;
+
+  // ★ サーバーに保存（ここが今まで無かった）
+  await fetch("/api/apps", {
+    method: "PUT",
+    body: JSON.stringify({
+      id: editingId,
+      name: form.name,
+      version: form.version,
+      createdAt: form.createdAt,
+      updatedAt: form.updatedAt,
+    }),
+  });
+
+  // ★ 画面も更新
+  setApps((prev) =>
+    prev.map((item) =>
+      item.id === editingId
+        ? {
+            ...item,
+            name: form.name,
+            version: form.version,
+            createdAt: form.createdAt,
+            updatedAt: form.updatedAt,
+            days,
+          }
+        : item
+    )
+  );
+
+  setEditingId(null);
+}
 
     setForm({
       name: "",

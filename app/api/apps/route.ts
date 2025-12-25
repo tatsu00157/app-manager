@@ -2,6 +2,14 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
+type AppRecord = {
+  id: number;
+  name: string;
+  version: string;
+  createdAt?: string;
+  updatedAt: string;
+};
+
 const filePath = path.join(process.cwd(), "data", "apps.json");
 
 // GET: 一覧取得
@@ -25,13 +33,7 @@ export async function POST(req: Request) {
 
   return NextResponse.json(newItem);
 }
-type AppRecord = {
-  id: number;
-  name: string;
-  version: string;
-  createdAt?: string;
-  updatedAt: string;
-};
+
 
 export async function DELETE(req: Request) {
   const { id } = (await req.json()) as { id: number };
@@ -46,3 +48,27 @@ export async function DELETE(req: Request) {
 
   return NextResponse.json({ success: true });
 }
+export async function PUT(req: Request) {
+  const body = (await req.json()) as AppRecord;
+
+  const data = JSON.parse(
+    fs.readFileSync(filePath, "utf-8")
+  ) as AppRecord[];
+
+  const newData = data.map((item) =>
+    item.id === body.id
+      ? {
+          ...item,
+          name: body.name,
+          version: body.version,
+          createdAt: body.createdAt,
+          updatedAt: body.updatedAt,
+        }
+      : item
+  );
+
+  fs.writeFileSync(filePath, JSON.stringify(newData, null, 2));
+
+  return NextResponse.json({ success: true });
+}
+
