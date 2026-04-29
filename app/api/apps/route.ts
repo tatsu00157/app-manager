@@ -8,6 +8,10 @@ type AppRecord = {
   version: string;
   createdAt?: string;
   updatedAt: string;
+  status?: string;
+  platform?: string[];
+  storeUrl?: string;
+  memo?: string;
 };
 
 const filePath = path.join(process.cwd(), "data", "apps.json");
@@ -24,7 +28,7 @@ export async function POST(req: Request) {
   const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
 
   const newItem = {
-    id: Date.now(), // ← server なので呼んでOK
+    id: Date.now(),
     ...body,
   };
 
@@ -63,6 +67,10 @@ export async function PUT(req: Request) {
           version: body.version,
           createdAt: body.createdAt,
           updatedAt: body.updatedAt,
+          status: body.status,
+          platform: body.platform,
+          storeUrl: body.storeUrl,
+          memo: body.memo,
         }
       : item
   );
