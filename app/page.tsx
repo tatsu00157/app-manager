@@ -8,6 +8,8 @@ const PINK_LIGHT = "#FFF0F6";
 type Status = "開発中" | "リリース済み" | "メンテナンス中" | "非公開";
 type Platform = "iOS" | "Android" | "Web" | "その他";
 
+type AppType = "personal" | "client";
+
 type AppItem = {
   id: number;
   name: string;
@@ -19,6 +21,7 @@ type AppItem = {
   platform: Platform[];
   storeUrl: string;
   memo: string;
+  type: AppType;
 };
 
 type AppForm = {
@@ -30,6 +33,7 @@ type AppForm = {
   platform: Platform[];
   storeUrl: string;
   memo: string;
+  type: AppType;
 };
 
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
@@ -50,6 +54,7 @@ const emptyForm: AppForm = {
   platform: [],
   storeUrl: "",
   memo: "",
+  type: "personal",
 };
 
 export default function Home() {
@@ -57,6 +62,7 @@ export default function Home() {
   const [form, setForm] = useState<AppForm>(emptyForm);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [activeTab, setActiveTab] = useState<"all" | AppType>("all");
 
   useEffect(() => {
     void loadApps();
@@ -74,6 +80,7 @@ export default function Home() {
       platform?: string[];
       storeUrl?: string;
       memo?: string;
+      type?: string;
     }[] = await res.json();
 
     const now = Date.now();
@@ -90,6 +97,7 @@ export default function Home() {
       platform: (item.platform as Platform[]) ?? [],
       storeUrl: item.storeUrl ?? "",
       memo: item.memo ?? "",
+      type: (item.type as AppType) ?? "personal",
     }));
 
     setApps(withDays);
@@ -159,6 +167,7 @@ export default function Home() {
       platform: item.platform,
       storeUrl: item.storeUrl,
       memo: item.memo,
+      type: item.type,
     });
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -258,6 +267,18 @@ export default function Home() {
               </h2>
 
               <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
+                <div style={formGroup}>
+                  <label style={labelStyle}>種別</label>
+                  <select
+                    value={form.type}
+                    onChange={(e) => setForm({ ...form, type: e.target.value as AppType })}
+                    style={inputStyle}
+                  >
+                    <option value="personal">自分用</option>
+                    <option value="client">クライアント用</option>
+                  </select>
+                </div>
+
                 <div style={formGroup}>
                   <label style={labelStyle}>アプリ名 *</label>
                   <input
@@ -361,171 +382,247 @@ export default function Home() {
             </div>
           )}
 
-          {/* Stats */}
-          <div className="stat-cards" style={{ display: "flex", gap: 10, marginBottom: 16 }}>
-            <div className="stat-card" style={statCard}>
-              <span style={{ fontSize: 24, fontWeight: "bold", color: PINK }}>{apps.length}</span>
-              <span style={{ fontSize: 12, color: "#888", marginTop: 2 }}>総アプリ数</span>
-            </div>
-            <div className="stat-card" style={statCard}>
-              <span style={{ fontSize: 24, fontWeight: "bold", color: "#2E7D32" }}>
-                {apps.filter((a) => a.status === "リリース済み").length}
-              </span>
-              <span style={{ fontSize: 12, color: "#888", marginTop: 2 }}>リリース済み</span>
-            </div>
-            <div className="stat-card" style={statCard}>
-              <span style={{ fontSize: 24, fontWeight: "bold", color: "#1565C0" }}>
-                {apps.filter((a) => a.status === "開発中").length}
-              </span>
-              <span style={{ fontSize: 12, color: "#888", marginTop: 2 }}>開発中</span>
-            </div>
-            <div className="stat-card" style={statCard}>
-              <span style={{ fontSize: 24, fontWeight: "bold", color: "#C62828" }}>
-                {apps.filter((a) => a.days >= 7).length}
-              </span>
-              <span style={{ fontSize: 12, color: "#888", marginTop: 2 }}>7日以上未更新</span>
-            </div>
-          </div>
-
-          {/* Desktop Table */}
-          <div className="table-view" style={{ background: "white", borderRadius: 12, boxShadow: "0 2px 16px rgba(255,77,141,0.1)", overflow: "hidden" }}>
-            <table className="app-table">
-              <thead>
-                <tr>
-                  <th>アプリ名</th>
-                  <th>バージョン</th>
-                  <th>ステータス</th>
-                  <th>プラットフォーム</th>
-                  <th>開発日</th>
-                  <th>更新日</th>
-                  <th>経過日</th>
-                  <th>メモ</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {apps.map((app) => (
-                  <tr key={app.id}>
-                    <td style={{ fontWeight: "bold" }}>
-                      {app.storeUrl ? (
-                        <a href={app.storeUrl} target="_blank" rel="noopener noreferrer"
-                          style={{ color: PINK, textDecoration: "none" }}>
-                          {app.name}
-                          <span style={{ fontSize: 11, marginLeft: 4, opacity: 0.7 }}>↗</span>
-                        </a>
-                      ) : app.name}
-                    </td>
-                    <td style={{ color: "#888", fontSize: 13 }}>v{app.version}</td>
-                    <td>
-                      {app.status ? (
-                        <span style={{
-                          ...badgeStyle,
-                          background: STATUS_COLORS[app.status]?.bg ?? "#eee",
-                          color: STATUS_COLORS[app.status]?.color ?? "#666",
-                        }}>
-                          {app.status}
-                        </span>
-                      ) : <span style={{ color: "#ccc", fontSize: 13 }}>—</span>}
-                    </td>
-                    <td style={{ fontSize: 13, color: "#555" }}>
-                      {app.platform.length > 0 ? app.platform.join(" / ") : <span style={{ color: "#ccc" }}>—</span>}
-                    </td>
-                    <td style={{ fontSize: 13, color: "#888" }}>{app.createdAt || <span style={{ color: "#ccc" }}>—</span>}</td>
-                    <td style={{ fontSize: 13, color: "#888" }}>{app.updatedAt || <span style={{ color: "#ccc" }}>—</span>}</td>
-                    <td style={{
-                      color: app.days >= 7 ? "#C62828" : "#333",
-                      fontWeight: app.days >= 7 ? "bold" : "normal",
+          {/* Tabs */}
+          {(() => {
+            const tabs: { key: "all" | AppType; label: string }[] = [
+              { key: "all", label: "全て" },
+              { key: "personal", label: "自分用" },
+              { key: "client", label: "クライアント用" },
+            ];
+            return (
+              <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key)}
+                    style={{
+                      padding: "7px 18px",
+                      borderRadius: 20,
+                      border: `2px solid ${activeTab === tab.key ? PINK : "#ddd"}`,
+                      background: activeTab === tab.key ? PINK : "white",
+                      color: activeTab === tab.key ? "white" : "#888",
+                      fontWeight: "bold",
                       fontSize: 13,
-                    }}>
-                      {app.updatedAt ? `${app.days}日` : <span style={{ color: "#ccc" }}>—</span>}
-                    </td>
-                    <td style={{ fontSize: 13, color: "#666", maxWidth: 180, whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
-                      {app.memo || <span style={{ color: "#ccc" }}>—</span>}
-                    </td>
-                    <td style={{ whiteSpace: "nowrap" }}>
-                      <button onClick={() => startEdit(app)} style={editBtnStyle}>編集</button>
-                      <button onClick={() => deleteItem(app.id)} style={deleteBtnStyle}>削除</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {apps.length === 0 && (
-              <div style={{ textAlign: "center", padding: 48, color: "#ccc", fontSize: 15 }}>
-                アプリがまだ登録されていません
-              </div>
-            )}
-          </div>
-
-          {/* Mobile Cards */}
-          <div className="cards-view">
-            {apps.map((app) => (
-              <div key={app.id} style={{
-                background: "white",
-                borderRadius: 12,
-                boxShadow: "0 2px 10px rgba(255,77,141,0.1)",
-                padding: 16,
-                marginBottom: 12,
-                borderLeft: `4px solid ${PINK}`,
-              }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-                  <div>
-                    {app.storeUrl ? (
-                      <a href={app.storeUrl} target="_blank" rel="noopener noreferrer"
-                        style={{ color: PINK, textDecoration: "none", fontWeight: "bold", fontSize: 16 }}>
-                        {app.name} <span style={{ fontSize: 12, opacity: 0.7 }}>↗</span>
-                      </a>
-                    ) : (
-                      <span style={{ fontWeight: "bold", fontSize: 16, color: "#333" }}>{app.name}</span>
-                    )}
-                    <span style={{ marginLeft: 8, color: "#aaa", fontSize: 13 }}>v{app.version}</span>
-                  </div>
-                  {app.status ? (
+                      cursor: "pointer",
+                    }}
+                  >
+                    {tab.label}
                     <span style={{
-                      ...badgeStyle,
-                      background: STATUS_COLORS[app.status]?.bg ?? "#eee",
-                      color: STATUS_COLORS[app.status]?.color ?? "#666",
+                      marginLeft: 6,
+                      background: activeTab === tab.key ? "rgba(255,255,255,0.3)" : "#f0f0f0",
+                      color: activeTab === tab.key ? "white" : "#aaa",
+                      borderRadius: 10,
+                      padding: "1px 7px",
+                      fontSize: 12,
                     }}>
-                      {app.status}
+                      {tab.key === "all" ? apps.length : apps.filter((a) => a.type === tab.key).length}
                     </span>
-                  ) : null}
-                </div>
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 12px", fontSize: 13, color: "#555", marginBottom: 8 }}>
-                  {app.platform.length > 0 && (
-                    <div><span style={{ color: "#bbb" }}>プラットフォーム: </span>{app.platform.join(" / ")}</div>
-                  )}
-                  {app.createdAt && (
-                    <div><span style={{ color: "#bbb" }}>開発日: </span>{app.createdAt}</div>
-                  )}
-                  {app.updatedAt && (
-                    <div style={{ gridColumn: "1 / -1" }}>
-                      <span style={{ color: "#bbb" }}>更新日: </span>
-                      <span style={{ color: app.days >= 7 ? "#C62828" : "inherit", fontWeight: app.days >= 7 ? "bold" : "normal" }}>
-                        {app.updatedAt}（{app.days}日前）
-                      </span>
+          {/* Stats */}
+          {(() => {
+            const filteredApps = activeTab === "all" ? apps : apps.filter((a) => a.type === activeTab);
+            return (
+              <div className="stat-cards" style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+                <div className="stat-card" style={statCard}>
+                  <span style={{ fontSize: 24, fontWeight: "bold", color: PINK }}>{filteredApps.length}</span>
+                  <span style={{ fontSize: 12, color: "#888", marginTop: 2 }}>総アプリ数</span>
+                </div>
+                <div className="stat-card" style={statCard}>
+                  <span style={{ fontSize: 24, fontWeight: "bold", color: "#2E7D32" }}>
+                    {filteredApps.filter((a) => a.status === "リリース済み").length}
+                  </span>
+                  <span style={{ fontSize: 12, color: "#888", marginTop: 2 }}>リリース済み</span>
+                </div>
+                <div className="stat-card" style={statCard}>
+                  <span style={{ fontSize: 24, fontWeight: "bold", color: "#1565C0" }}>
+                    {filteredApps.filter((a) => a.status === "開発中").length}
+                  </span>
+                  <span style={{ fontSize: 12, color: "#888", marginTop: 2 }}>開発中</span>
+                </div>
+                <div className="stat-card" style={statCard}>
+                  <span style={{ fontSize: 24, fontWeight: "bold", color: "#C62828" }}>
+                    {filteredApps.filter((a) => a.days >= 7).length}
+                  </span>
+                  <span style={{ fontSize: 12, color: "#888", marginTop: 2 }}>7日以上未更新</span>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Desktop Table & Mobile Cards */}
+          {(() => {
+            const filteredApps = activeTab === "all" ? apps : apps.filter((a) => a.type === activeTab);
+            const showTypeBadge = activeTab === "all";
+            return (
+              <>
+                <div className="table-view" style={{ background: "white", borderRadius: 12, boxShadow: "0 2px 16px rgba(255,77,141,0.1)", overflow: "hidden" }}>
+                  <table className="app-table">
+                    <thead>
+                      <tr>
+                        <th>アプリ名</th>
+                        <th>バージョン</th>
+                        <th>ステータス</th>
+                        {showTypeBadge && <th>種別</th>}
+                        <th>プラットフォーム</th>
+                        <th>開発日</th>
+                        <th>更新日</th>
+                        <th>経過日</th>
+                        <th>メモ</th>
+                        <th>操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredApps.map((app) => (
+                        <tr key={app.id}>
+                          <td style={{ fontWeight: "bold" }}>
+                            {app.storeUrl ? (
+                              <a href={app.storeUrl} target="_blank" rel="noopener noreferrer"
+                                style={{ color: PINK, textDecoration: "none" }}>
+                                {app.name}
+                                <span style={{ fontSize: 11, marginLeft: 4, opacity: 0.7 }}>↗</span>
+                              </a>
+                            ) : app.name}
+                          </td>
+                          <td style={{ color: "#888", fontSize: 13 }}>v{app.version}</td>
+                          <td>
+                            {app.status ? (
+                              <span style={{
+                                ...badgeStyle,
+                                background: STATUS_COLORS[app.status]?.bg ?? "#eee",
+                                color: STATUS_COLORS[app.status]?.color ?? "#666",
+                              }}>
+                                {app.status}
+                              </span>
+                            ) : <span style={{ color: "#ccc", fontSize: 13 }}>—</span>}
+                          </td>
+                          {showTypeBadge && (
+                            <td>
+                              <span style={{
+                                ...badgeStyle,
+                                background: app.type === "client" ? "#BBDEFB" : "#FFE4F0",
+                                color: app.type === "client" ? "#1565C0" : PINK,
+                              }}>
+                                {app.type === "client" ? "クライアント" : "自分用"}
+                              </span>
+                            </td>
+                          )}
+                          <td style={{ fontSize: 13, color: "#555" }}>
+                            {app.platform.length > 0 ? app.platform.join(" / ") : <span style={{ color: "#ccc" }}>—</span>}
+                          </td>
+                          <td style={{ fontSize: 13, color: "#888" }}>{app.createdAt || <span style={{ color: "#ccc" }}>—</span>}</td>
+                          <td style={{ fontSize: 13, color: "#888" }}>{app.updatedAt || <span style={{ color: "#ccc" }}>—</span>}</td>
+                          <td style={{
+                            color: app.days >= 7 ? "#C62828" : "#333",
+                            fontWeight: app.days >= 7 ? "bold" : "normal",
+                            fontSize: 13,
+                          }}>
+                            {app.updatedAt ? `${app.days}日` : <span style={{ color: "#ccc" }}>—</span>}
+                          </td>
+                          <td style={{ fontSize: 13, color: "#666", maxWidth: 180, whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
+                            {app.memo || <span style={{ color: "#ccc" }}>—</span>}
+                          </td>
+                          <td style={{ whiteSpace: "nowrap" }}>
+                            <button onClick={() => startEdit(app)} style={editBtnStyle}>編集</button>
+                            <button onClick={() => deleteItem(app.id)} style={deleteBtnStyle}>削除</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {filteredApps.length === 0 && (
+                    <div style={{ textAlign: "center", padding: 48, color: "#ccc", fontSize: 15 }}>
+                      アプリがまだ登録されていません
                     </div>
                   )}
                 </div>
 
-                {app.memo && (
-                  <div style={{ fontSize: 13, color: "#555", background: "#FFF8FB", padding: "8px 12px", borderRadius: 8, marginBottom: 10, borderLeft: `3px solid ${PINK}` }}>
-                    {app.memo}
-                  </div>
-                )}
+                <div className="cards-view">
+                  {filteredApps.map((app) => (
+                    <div key={app.id} style={{
+                      background: "white",
+                      borderRadius: 12,
+                      boxShadow: "0 2px 10px rgba(255,77,141,0.1)",
+                      padding: 16,
+                      marginBottom: 12,
+                      borderLeft: `4px solid ${app.type === "client" ? "#1565C0" : PINK}`,
+                    }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                        <div>
+                          {app.storeUrl ? (
+                            <a href={app.storeUrl} target="_blank" rel="noopener noreferrer"
+                              style={{ color: PINK, textDecoration: "none", fontWeight: "bold", fontSize: 16 }}>
+                              {app.name} <span style={{ fontSize: 12, opacity: 0.7 }}>↗</span>
+                            </a>
+                          ) : (
+                            <span style={{ fontWeight: "bold", fontSize: 16, color: "#333" }}>{app.name}</span>
+                          )}
+                          <span style={{ marginLeft: 8, color: "#aaa", fontSize: 13 }}>v{app.version}</span>
+                        </div>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                          {showTypeBadge && (
+                            <span style={{
+                              ...badgeStyle,
+                              background: app.type === "client" ? "#BBDEFB" : "#FFE4F0",
+                              color: app.type === "client" ? "#1565C0" : PINK,
+                            }}>
+                              {app.type === "client" ? "クライアント" : "自分用"}
+                            </span>
+                          )}
+                          {app.status ? (
+                            <span style={{
+                              ...badgeStyle,
+                              background: STATUS_COLORS[app.status]?.bg ?? "#eee",
+                              color: STATUS_COLORS[app.status]?.color ?? "#666",
+                            }}>
+                              {app.status}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
 
-                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                  <button onClick={() => startEdit(app)} style={editBtnStyle}>編集</button>
-                  <button onClick={() => deleteItem(app.id)} style={deleteBtnStyle}>削除</button>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 12px", fontSize: 13, color: "#555", marginBottom: 8 }}>
+                        {app.platform.length > 0 && (
+                          <div><span style={{ color: "#bbb" }}>プラットフォーム: </span>{app.platform.join(" / ")}</div>
+                        )}
+                        {app.createdAt && (
+                          <div><span style={{ color: "#bbb" }}>開発日: </span>{app.createdAt}</div>
+                        )}
+                        {app.updatedAt && (
+                          <div style={{ gridColumn: "1 / -1" }}>
+                            <span style={{ color: "#bbb" }}>更新日: </span>
+                            <span style={{ color: app.days >= 7 ? "#C62828" : "inherit", fontWeight: app.days >= 7 ? "bold" : "normal" }}>
+                              {app.updatedAt}（{app.days}日前）
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {app.memo && (
+                        <div style={{ fontSize: 13, color: "#555", background: "#FFF8FB", padding: "8px 12px", borderRadius: 8, marginBottom: 10, borderLeft: `3px solid ${PINK}` }}>
+                          {app.memo}
+                        </div>
+                      )}
+
+                      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                        <button onClick={() => startEdit(app)} style={editBtnStyle}>編集</button>
+                        <button onClick={() => deleteItem(app.id)} style={deleteBtnStyle}>削除</button>
+                      </div>
+                    </div>
+                  ))}
+                  {filteredApps.length === 0 && (
+                    <div style={{ textAlign: "center", padding: 48, color: "#ccc", fontSize: 15 }}>
+                      アプリがまだ登録されていません
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
-            {apps.length === 0 && (
-              <div style={{ textAlign: "center", padding: 48, color: "#ccc", fontSize: 15 }}>
-                アプリがまだ登録されていません
-              </div>
-            )}
-          </div>
+              </>
+            );
+          })()}
 
         </div>
       </div>
