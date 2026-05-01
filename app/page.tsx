@@ -22,6 +22,7 @@ type AppItem = {
   storeUrl: string;
   memo: string;
   type: AppType;
+  deliveryDate: string;
 };
 
 type AppForm = {
@@ -34,6 +35,7 @@ type AppForm = {
   storeUrl: string;
   memo: string;
   type: AppType;
+  deliveryDate: string;
 };
 
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
@@ -55,6 +57,7 @@ const emptyForm: AppForm = {
   storeUrl: "",
   memo: "",
   type: "personal",
+  deliveryDate: "",
 };
 
 export default function Home() {
@@ -81,6 +84,7 @@ export default function Home() {
       storeUrl?: string;
       memo?: string;
       type?: string;
+      deliveryDate?: string;
     }[] = await res.json();
 
     const now = Date.now();
@@ -98,6 +102,7 @@ export default function Home() {
       storeUrl: item.storeUrl ?? "",
       memo: item.memo ?? "",
       type: (item.type as AppType) ?? "personal",
+      deliveryDate: item.deliveryDate ?? "",
     }));
 
     setApps(withDays);
@@ -168,6 +173,7 @@ export default function Home() {
       storeUrl: item.storeUrl,
       memo: item.memo,
       type: item.type,
+      deliveryDate: item.deliveryDate,
     });
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -334,6 +340,18 @@ export default function Home() {
                   />
                 </div>
 
+                {form.type === "client" && (
+                  <div style={formGroup}>
+                    <label style={labelStyle}>納品予定日</label>
+                    <input
+                      type="date"
+                      value={form.deliveryDate}
+                      onChange={(e) => setForm({ ...form, deliveryDate: e.target.value })}
+                      style={inputStyle}
+                    />
+                  </div>
+                )}
+
                 <div style={{ ...formGroup, flexBasis: "100%" }}>
                   <label style={labelStyle}>ストアURL</label>
                   <input
@@ -458,6 +476,8 @@ export default function Home() {
           {(() => {
             const filteredApps = activeTab === "all" ? apps : apps.filter((a) => a.type === activeTab);
             const showTypeBadge = activeTab === "all";
+            const showDelivery = activeTab !== "personal";
+            const today = new Date(); today.setHours(0, 0, 0, 0);
             return (
               <>
                 <div className="table-view" style={{ background: "white", borderRadius: 12, boxShadow: "0 2px 16px rgba(255,77,141,0.1)", overflow: "hidden" }}>
@@ -472,6 +492,7 @@ export default function Home() {
                         <th>開発日</th>
                         <th>更新日</th>
                         <th>経過日</th>
+                        {showDelivery && <th>納品予定日</th>}
                         <th>メモ</th>
                         <th>操作</th>
                       </tr>
@@ -523,6 +544,24 @@ export default function Home() {
                           }}>
                             {app.updatedAt ? `${app.days}日` : <span style={{ color: "#ccc" }}>—</span>}
                           </td>
+                          {showDelivery && (() => {
+                            if (app.type !== "client") return <td style={{ color: "#ccc", fontSize: 13 }}>—</td>;
+                            const isPast = app.deliveryDate ? new Date(app.deliveryDate) < today : false;
+                            const isNear = app.deliveryDate && !isPast
+                              ? (new Date(app.deliveryDate).getTime() - today.getTime()) / 86400000 <= 7
+                              : false;
+                            return (
+                              <td style={{
+                                fontSize: 13,
+                                color: isPast ? "#C62828" : isNear ? "#E65100" : "#555",
+                                fontWeight: isPast || isNear ? "bold" : "normal",
+                              }}>
+                                {app.deliveryDate || <span style={{ color: "#ccc" }}>—</span>}
+                                {isPast && <span style={{ marginLeft: 4, fontSize: 11 }}>期限超過</span>}
+                                {isNear && <span style={{ marginLeft: 4, fontSize: 11 }}>まもなく</span>}
+                              </td>
+                            );
+                          })()}
                           <td style={{ fontSize: 13, color: "#666", maxWidth: 180, whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
                             {app.memo || <span style={{ color: "#ccc" }}>—</span>}
                           </td>
@@ -600,6 +639,24 @@ export default function Home() {
                             </span>
                           </div>
                         )}
+                        {app.type === "client" && (() => {
+                          const isPast = app.deliveryDate ? new Date(app.deliveryDate) < today : false;
+                          const isNear = app.deliveryDate && !isPast
+                            ? (new Date(app.deliveryDate).getTime() - today.getTime()) / 86400000 <= 7
+                            : false;
+                          return (
+                            <div style={{ gridColumn: "1 / -1" }}>
+                              <span style={{ color: "#bbb" }}>納品予定日: </span>
+                              {app.deliveryDate ? (
+                                <span style={{ color: isPast ? "#C62828" : isNear ? "#E65100" : "inherit", fontWeight: isPast || isNear ? "bold" : "normal" }}>
+                                  {app.deliveryDate}
+                                  {isPast && <span style={{ marginLeft: 4, fontSize: 11 }}>期限超過</span>}
+                                  {isNear && <span style={{ marginLeft: 4, fontSize: 11 }}>まもなく</span>}
+                                </span>
+                              ) : <span style={{ color: "#ccc" }}>—</span>}
+                            </div>
+                          );
+                        })()}
                       </div>
 
                       {app.memo && (

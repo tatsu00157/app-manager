@@ -82,6 +82,7 @@ type AppRecord = {
   storeUrl?: string;    // ストアURL（App Store / Play Store など）
   memo?: string;        // メモ（次にやること、課題など）
   type?: "personal" | "client";  // 自分用 / クライアント用（デフォルト: personal）
+  deliveryDate?: string;         // 納品予定日（YYYY-MM-DD）クライアント用のみ
 }
 ```
 
@@ -139,3 +140,4 @@ type AppRecord = {
 | 2026-04-30 | ダークモード起因のアプリ名グレー表示を修正（colorScheme: light を指定） |
 | 2026-04-30 | 運用ルールにgit commit+pushを追加、今後の方針を個人用に更新 |
 | 2026-05-02 | 種別管理（自分用/クライアント用）を追加。タブUI・フォームセレクト・種別バッジ対応 |
+| 2026-05-02 | クライアント用に納品予定日フィールドを追加。期限超過・7日以内に警告表示 |

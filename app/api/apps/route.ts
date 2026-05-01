@@ -13,6 +13,7 @@ type AppRecord = {
   storeUrl?: string;
   memo?: string;
   type?: "personal" | "client";
+  deliveryDate?: string;
 };
 
 const filePath = path.join(process.cwd(), "data", "apps.json");
@@ -73,6 +74,7 @@ export async function PUT(req: Request) {
           storeUrl: body.storeUrl,
           memo: body.memo,
           type: body.type,
+          deliveryDate: body.deliveryDate,
         }
       : item
   );
